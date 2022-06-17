@@ -211,6 +211,7 @@ def unpack_stim_npy(npy_dir, md5_hash):
 
     cursor = 0
     for i, n_frame in enumerate(marker[:,0]):
+        n_frame = int(n_frame) # ensures correct type for indexing below
         unpack_inten[cursor:cursor+n_frame] = inten[i]
         unpack_marker[cursor:cursor+n_frame] = marker[i, 1]
         if shader is not None:
@@ -218,6 +219,7 @@ def unpack_stim_npy(npy_dir, md5_hash):
         cursor += n_frame
 
     return unpack_inten, unpack_marker, unpack_shader
+
 
 # Cell
 def extract_spyking_circus_results(dir_, record_basename):
