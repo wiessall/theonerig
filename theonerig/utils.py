@@ -322,36 +322,55 @@ def get_calcium_stack_lenghts(folder):
             record_lenghts.append(int(re.findall(pattern_nFrame, line)[0]))
     return record_lenghts
 
-def twoP_dataChunks(ref_timepoints:DataChunk, frame_timepoints, len_epochs, *args):
+def twoP_dataChunks(ref_timepoints, frame_timepoints, len_epochs, cursor=None, *args):
     """
-    Factory function for two photon data.
+    Factory function for two photon data. /media/asari/Tristan/07_Data/I_DRN_Chemogenetics/2022_03_16/analysis_ID_10/cell_summary_reM_2022_03_16_no_drug_ID10_Session_04_Photodiode_01.pdf
 
     params:
         - ref_timepoints: Reference timepoints to create the DataChunk
         - frame_timepoints: List of frame timepoints for each sequence of two photon frame recorded.
-        - len_epochs: Lenght of the recorded epochs (<= than the corresponding frame_timepoints). Int of list
+        - len_epochs: Lenght of the recorded epochs (<= than the corresponding frame_timepoints). Int or list
         - args: matrices of all frames detected by CaImAn. (give as many as you want to synchronise)
 
     return:
         - tuple containing the synchronised matrices in the order it was given
     """
     assert len(args)>=1, "no matrix to be synchronised was given"
-    res_l = [[] for i in range(len(args))]
-    cursor = 0
+    res_l = [[] for i in range(len(args))] # A list containing 1 entry per Ca-matrix to be processed
+    if cursor is None:
+        cursor = 0 # counter of from where to start indexing into the Ca-matrices
     if isinstance(len_epochs, int):
         len_epochs = [len_epochs]
+    # For every recording block (defined by len_epochs, that counts the number of frames within
+    # the recording), find the index (for the ref_timepoints) of the first and last frame of
+    # that block.
     for i, len_epoch in enumerate(len_epochs):
-        start_idx = np.argmax(ref_timepoints>frame_timepoints[i][0])
-        stop_idx  = np.argmax(ref_timepoints>frame_timepoints[i][len_epoch-1])
+        first_ca = frame_timepoints[i][0]
+        if len_epoch > len(frame_timepoints[i]):
+            last_ca = frame_timepoints[i][-1]
+            print(i, "Ca data longer than sync timepoints!")
+        else:
+            last_ca = frame_timepoints[i][len_epoch-1]
+        if isinstance(ref_timepoints, Data_Pipe):
+            start_idx = np.argmax(ref_timepoints[i]['main_tp']>first_ca)
+            stop_idx  = np.argmax(ref_timepoints[i]['main_tp']>last_ca)
+        else:
+            start_idx = np.argmax(ref_timepoints>first_ca)
+            stop_idx  = np.argmax(ref_timepoints>last_ca)
         for k, matrix in enumerate(args):
+            # Slice the Ca-matrix in the time dimension to the duration of the recording block
             sub_mat = matrix.T[cursor:cursor+len_epoch]
-
+            # Generate a linear interpolation function of the Ca-matrix values over the time of the
+            # recording block, axis 0 is axis of the Ca-intensity values over time
             f = interpolate.interp1d(range(len_epoch), sub_mat, axis=0)
+            # stop_idx-start_idx defines the number of timepoints for which values need to be
+            # interpolated (i.e resolution). The block duration is again defined by len_epoch.
+            # This interpolated data will be inserted as a datachunk object starting at the
+            # correct start_idx (indexing ref_timpoints)
             res_l[k].append(DataChunk(data=f(np.linspace(0,len_epoch-1,stop_idx-start_idx)),
                                            idx=start_idx,
                                            group="cell"))
-        cursor += len_epoch
-
+        cursor += len_epoch # Skip indexing to the start of the next recording epoch
     return tuple(res_l)
 
 # Cell
