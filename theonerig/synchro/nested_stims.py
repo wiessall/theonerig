@@ -4,19 +4,18 @@ __all__ = ['get_stim_ids', 'get_synced_file', 'get_synced_file_precompile', 'get
            'find_stim_onsets', 'append_tread_movement', 'twoP_dataChunks_2', 'append_to_reM', 'master_loop']
 
 # Cell
+
+import numpy as np
+import glob, os, datetime
+#import ast
 from .io import *
 from .processing import *
 from .extracting import *
-
 from ..core import *
 from ..utils import *
 from ..database import *
 from ..processing import *
 from ..plotting import *
-
-import numpy as np
-import glob, os, datetime
-import ast
 
 def get_stim_ids(log, record_time, lastmodif_time):
     """Obtain the correct name of the stimulus, based on the name that appears in the QDSpy log
@@ -260,7 +259,6 @@ def append_to_reM(epoch_counter, reM, retain_template, stim_list_dir, stim_ids, 
 
         # One of Tom's stimuli??
         if stim.name in retain_template:
-#             tom_stim_dir = os.path.join("/media/asari/Tristan/01_Code/013_Leiron_Sweep/Day_1")
             # unpacked is a tuple of (frames presented, REF and shader)
             unpacked = unpack_stim_npy(tom_stim_dir, stim.md5)
             estimate_start = get_position_estimate(stim.start_time, record_time, 10000)
@@ -382,6 +380,7 @@ from ..plotting import *
 
 import numpy as np
 import glob, os, datetime
+
 
 def master_loop(log, retain_template, tom_stim_dir, sync_dir, calcium_dir, stim_list_dir,
                 stim_dict_dir, stack_info_dir):
